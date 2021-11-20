@@ -1,0 +1,48 @@
+select 
+REL.numerodopedido,
+REL.codigoproduto,
+REL.descricaoproduto,
+REL.formadepagamento,
+CAST (REL.custoreal    AS NUMERIC(12,2)),
+CAST (REL.precodevenda AS NUMERIC(12,2)),
+CAST (REL.valordescontoporproduto AS NUMERIC(12,2)),
+CAST (REL.valortaxaadmporproduto AS NUMERIC(12,2)),
+CAST (REL.valorlucro   AS NUMERIC(12,2)),
+CAST (REL.porcentagemdataxaadm AS NUMERIC(12,2))
+
+from (
+  SELECT
+  pv.codpedidovenda       as numerodopedido,--OK
+  P.codproduto            as codigoproduto,--OK
+  P.descricao             as descricaoproduto,--OL
+  coalesce(P.custoreal,0) as custoreal,--OK
+  PPV.valortotal		  as precodevenda,--OK
+  fp.taxaadm              as porcentagemdataxaadm,--OK
+  fp.descricao            as formadepagamento,--OK
+
+  --valor desconto rateado
+  CASE WHEN pv.desconto > 0 THEN
+  ppv.valortotal * 100 / pv.valortotalprodutos * pv.desconto / 100
+  else 0 end as valordescontoporproduto,--OK
+
+  --valor taxa adm por produto
+  CASE WHEN fp.taxaadm > 0 THEN
+  ppv.valortotal * 100 / pv.valortotalprodutos * (fp.taxaadm*pv.valortotalprodutos/100) / 100
+  else 0 end as valortaxaadmporproduto,--OK
+
+  --calculando o lucro 
+  ppv.valortotal - (CASE WHEN pv.desconto > 0 THEN
+                    ppv.valortotal * 100 / pv.valortotalprodutos * pv.desconto / 100
+                    else 0 end) - (CASE WHEN fp.taxaadm > 0 THEN
+                                   ppv.valortotal * 100 / pv.valortotalprodutos * (fp.taxaadm*pv.valortotalprodutos/100) / 100
+                                   else 0 end) - coalesce(P.custoreal,0) as valorlucro--OK
+  FROM produto p
+  inner join produtopedidovenda ppv on ppv.codproduto = p.codproduto
+  inner join pedidovenda 		 pv on pv.codpedidovenda = ppv.codpedidovenda
+  inner join pgtopedidovenda    pgt on pv.codpedidovenda = pgt.codpedidovenda
+  inner join formapagamento      fp on fp.codformapagamento = pgt.codformapagamento
+  where 
+  pv.datapedido BETWEEN :d1 and :d2
+) AS REL
+ORDER BY
+4

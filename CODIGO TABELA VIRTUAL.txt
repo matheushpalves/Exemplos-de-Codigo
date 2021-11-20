@@ -1,0 +1,46 @@
+WITH pgto as 
+(
+select
+    codpedido,
+    mesas,
+    cast(
+        array_to_string(array_agg(formapagamentopedido), ' | ') as varchar(200) 
+    ) as valorespagamento
+from
+    (
+        select
+            tt.codpedido,
+            tt.nome as mesas,
+            (
+                tt.DESCFORMAPGTO || ': ' || 'R$' || replace(tt.VALORPAGO :: varchar(20), '.', ',')
+            ) as formapagamentopedido
+        from
+            (
+                select
+                  M.NOME,
+                  PGP.CODPEDIDO,
+                  PGP.DESCFORMAPGTO,
+                  PGP.VALORPAGO,
+                  PGP.TROCO,
+                  P.VALORTOTALGERAL                        
+                FROM
+                    PAGAMENTOPARCIAL PGP
+                    INNER JOIN PEDIDO P ON P.CODPEDIDO = PGP.CODPEDIDO
+                    LEFT JOIN MESA M ON M.CODMESA = P.CODMESA
+                WHERE
+                    TIPOPGTO = 'Mesa'
+                    and P.datahorafechamento BETWEEN :D1
+                    AND :D2
+            ) tt
+    ) as teste
+group by
+    teste.codpedido,
+    teste.mesas
+) 
+SELECT 
+PG.valorespagamento,
+PD.codpedido,
+pg.mesas,
+pd.valortotalgeral
+FROM PEDIDO PD 
+INNER JOIN PGTO PG ON PD.codpedido = PG.CODPEDIDO

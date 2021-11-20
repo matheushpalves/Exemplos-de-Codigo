@@ -1,0 +1,133 @@
+//SALVER ARQUIVO EXCEL
+
+    QRelQTD.Active := False;
+    QRelQTD.ParamByName('D1').Value := DataInicial.Text;
+    QRelQTD.ParamByName('D2').Value := DataFinal.Text;
+    QRelQTD.Active := True;
+
+    Linha := 1;
+
+    Excel := CreateOleObject('Excel.Application');
+    Excel.Visible := False;
+
+    //Criando um novo arquivo Excel
+    Excel.WorkBooks.Add;
+
+    //Criando uma nova aba Excel
+    Excel.Workbooks[1].Sheets.Add;
+
+    //Nomeando o Arquivo criado
+    Excel.Workbooks[1].WorkSheets[1].Name := 'Exportacao';
+    Folha := Excel.Workbooks[1].WorkSheets['Exportacao'];
+
+    //Formatando a Celula dos Titulos
+    Folha.Range['A1','J1'].font.name           := 'Arial';  // Fonte
+    Folha.Range['A1','J1'].font.size           := 10;       // Tamanho da Fonte
+    Folha.Range['A1','J1'].font.bold           := True;     // Negrito
+    Folha.Range['A1','J1'].font.italic         := False;    // Italico
+    Folha.Range['A1','J1'].font.color          := clBlack;  // Cor da Fonte
+    Folha.Range['A1','J1'].Interior.Color      := $00DDDD9B;
+    Folha.Range['A1','J1'].HorizontalAlignment := 3;
+
+    //Definindo  a largura de cada celula
+    Folha.Range['A1'].ColumnWidth := 15; //Cód. Produto
+    Folha.Range['B1'].ColumnWidth := 50; //Descricao
+    Folha.Range['C1'].ColumnWidth := 20; //Qtd.
+    Folha.Range['D1'].ColumnWidth := 15; //Valor
+    Folha.Range['E1'].ColumnWidth := 18; //%
+    Folha.Range['F1'].ColumnWidth := 15; //% Acunulado
+    Folha.Range['G1'].ColumnWidth := 15; //Classificação
+
+    //Definindo o Titulo
+    Excel.Workbooks[1].Sheets[1].Cells[Linha,1]  := 'Cód. Produto';
+    Excel.Workbooks[1].Sheets[1].Cells[Linha,2]  := 'Descricao';
+    Excel.Workbooks[1].Sheets[1].Cells[Linha,3]  := 'Qtd.';
+    Excel.Workbooks[1].Sheets[1].Cells[Linha,4]  := 'Valor';
+    Excel.Workbooks[1].Sheets[1].Cells[Linha,5]  := '%';
+    Excel.Workbooks[1].Sheets[1].Cells[Linha,6]  := '% Acunulado';
+    Excel.Workbooks[1].Sheets[1].Cells[Linha,7]  := 'Classificação';
+
+    QRelQTD.First;
+    while not QRelQTD.Eof do
+    begin
+      totalAcumulado :=  totalAcumulado + QRelQTDporcqtd.Value;
+
+      Linha := Linha + 1;
+      Excel.Workbooks[1].Sheets[1].Cells[Linha,1]  := QRelQTDcodproduto.value;
+      Excel.Workbooks[1].Sheets[1].Cells[Linha,2]  := QRelQTDdescricao.value;
+      Excel.Workbooks[1].Sheets[1].Cells[Linha,3]  := QRelQTDqtd.value;
+      Excel.Workbooks[1].Sheets[1].Cells[Linha,4]  := QRelQTDvalor.value;
+      Excel.Workbooks[1].Sheets[1].Cells[Linha,5]  := QRelQTDporcqtd.value;
+      Excel.Workbooks[1].Sheets[1].Cells[Linha,6]  := totalAcumulado;
+      if (TotalAcumulado >= 0) and (TotalAcumulado <= 70) then
+      begin
+        Excel.Workbooks[1].Sheets[1].Cells[Linha,7]  := 'A';
+      end else
+      if (TotalAcumulado > 70) and (TotalAcumulado <= 90) then
+      begin
+        Excel.Workbooks[1].Sheets[1].Cells[Linha,7]  := 'B';
+      end else
+      begin
+        Excel.Workbooks[1].Sheets[1].Cells[Linha,7]  := 'C';
+      end;
+
+      Folha.Cells[Linha,4].NumberFormat := 'R$ #.##0,00_);(R$ #.##0,00)';
+      QRelQTD.Next;
+    end;
+
+    //---------------------------------------------------------------------
+    //--------------------------- RODAPE ----------------------------------
+    //---------------------------------------------------------------------
+    LINHA := LINHA + 3;
+    InicioRodape := 2;
+
+    //Formatando a Celula dos Titulos
+    Folha.Range['A' + IntToStr(Linha),'H' + IntToStr(Linha)].font.name := 'Arial';  // Fonte
+    Folha.Range['A' + IntToStr(Linha),'H' + IntToStr(Linha)].font.size := 10;       // Tamanho da Fonte
+    Folha.Range['A' + IntToStr(Linha),'H' + IntToStr(Linha)].font.bold := True;     // Negrito
+    Folha.Range['A' + IntToStr(Linha),'H' + IntToStr(Linha)].font.italic := False;  // Italico
+    Folha.Range['A' + IntToStr(Linha),'H' + IntToStr(Linha)].font.color := clBlack; // Cor da Fonte
+
+    //Definindo  a largura de cada celula
+    Folha.Range['B' + IntToStr(Linha)].ColumnWidth:= 10; //TOTAL PRODUTOS
+    Folha.Range['C' + IntToStr(Linha)].ColumnWidth:= 15; //TOTAL NFE
+
+    //Definindo titulo
+    Excel.Workbooks[1].sheets[1].cells[Linha,5] := 'Soma Total Qtd.';
+    Excel.Workbooks[1].sheets[1].cells[Linha,6] := 'Soma Total Valor';
+
+    //Soma Total Produtos
+    Excel.Workbooks[1].Sheets[1].Cells[Linha+1,5] := '=SUM(C' + IntToStr(InicioRodape) + ':C' + IntToStr(Linha) + ')';
+    //Soma Total NF-e
+    Excel.Workbooks[1].Sheets[1].Cells[Linha+1,6] := '=SUM(D' + IntToStr(InicioRodape) + ':D' + IntToStr(Linha) + ')';
+
+    Folha.Cells[Linha,5].NumberFormat  := 'R$ #.##0,00_);(R$ #.##0,00)'; //Soma Total Produtos
+    Folha.Cells[Linha,6].NumberFormat  := 'R$ #.##0,00_);(R$ #.##0,00)'; //Soma Total NF-e
+
+    SaveDialog1.Title      := 'Salvar Arquivo';
+    SaveDialog1.Filter     := 'Excel files|*.xlsx'; //define filter
+    SaveDialog1.DefaultExt := '*.xlsx';
+
+    if SaveDialog1.Execute then
+    Begin
+      if SaveDialog1.FileName <> '' then
+      begin
+        DirToSave := SaveDialog1.FileName;
+      end
+      else
+      begin
+        Excel.Quit;// Fecha o processo do Excel.
+        Excel := Unassigned;
+        Exit;
+      end;
+    end
+    else
+    begin
+      Excel.Quit;// Fecha o processo do Excel.
+      Excel := Unassigned;
+      Exit;
+    end;
+
+    Excel.Workbooks[1].SaveAs(DirToSave);
+    Excel.Quit;// Fecha o processo do Excel após salvar.
+    Excel := Unassigned;
